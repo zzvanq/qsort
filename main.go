@@ -4,55 +4,87 @@ import (
 	"math/rand"
 )
 
-type PivotSetter func(arr []int, l, h int)
+type PivotGetter func([]int, int, int) int
+type Partitioner func([]int, int, int, int) int
 
-var PivotSetters = map[string]PivotSetter{
-	"random": setRandomPivot,
-	"median": setMedianPivot,
-	"fixed":  func(arr []int, l, h int) {},
+var Partitioners = map[string]Partitioner{
+	"hoare":  partitionHoare,
+	"lomuto": partitionLomuto,
 }
 
-func setRandomPivot(arr []int, l, h int) {
-	p := rand.Intn(h-l) + l
-	arr[h], arr[p] = arr[p], arr[h]
+var PivotGetters = map[string]PivotGetter{
+	"random": getRandomPivot,
+	"median": getMedianPivot,
+	"fixed":  func(nums []int, l, h int) int { return h },
 }
 
-func setMedianPivot(arr []int, l, h int) {
-	m := (l + h) / 2
-
-	if arr[m] < arr[l] {
-		arr[m], arr[l] = arr[l], arr[m]
-	}
-	if arr[h] < arr[l] {
-		arr[l], arr[h] = arr[h], arr[l]
-	}
-	if arr[m] < arr[h] {
-		arr[m], arr[h] = arr[h], arr[m]
-	}
-}
-
-func Sort(arr []int, l, h int, pivotSetter PivotSetter) {
+func Sort(nums []int, l, h int, pivotGetter, partitioner string) {
 	if l >= h {
 		return
 	}
 
-	p := partition(arr, l, h, pivotSetter)
-	Sort(arr, l, p-1, pivotSetter)
-	Sort(arr, p+1, h, pivotSetter)
+	p := PivotGetters[pivotGetter](nums, l, h)
+	p = Partitioners[partitioner](nums, l, h, p)
+
+	if partitioner == "hoare" {
+		Sort(nums, l, p, pivotGetter, partitioner)
+	} else {
+		Sort(nums, l, p-1, pivotGetter, partitioner)
+	}
+	Sort(nums, p+1, h, pivotGetter, partitioner)
 }
 
-func partition(arr []int, l, h int, pivotSetter PivotSetter) int {
-	pivotSetter(arr, l, h)
-	p := h
+func partitionHoare(nums []int, l, h, p int) int {
+	nums[l], nums[p] = nums[p], nums[l]
+	piv := nums[l]
+	i, j := l-1, h+1
+
+	for {
+		i++
+		for nums[i] < piv {
+			i++
+		}
+
+		j--
+		for nums[j] > piv {
+			j--
+		}
+
+		if i >= j {
+			return j
+		}
+		nums[i], nums[j] = nums[j], nums[i]
+	}
+}
+
+func partitionLomuto(nums []int, l, h, p int) int {
+	nums[p], nums[h] = nums[h], nums[p]
+	p = h
 
 	i := l
 	for j := l; j < h; j++ {
-		if arr[j] <= arr[p] {
-			arr[i], arr[j] = arr[j], arr[i]
+		if nums[j] <= nums[p] {
+			nums[i], nums[j] = nums[j], nums[i]
 			i++
 		}
 	}
 
-	arr[i], arr[p] = arr[p], arr[i]
+	nums[i], nums[p] = nums[p], nums[i]
 	return i
+}
+
+func getRandomPivot(nums []int, l, h int) int {
+	return rand.Intn(h-l) + l
+}
+
+func getMedianPivot(nums []int, l, h int) int {
+	m := (l + h) / 2
+
+	if (nums[l] < nums[m]) != (nums[l] < nums[h]) {
+		return l
+	}
+	if (nums[m] < nums[l]) != (nums[m] < nums[h]) {
+		return m
+	}
+	return h
 }

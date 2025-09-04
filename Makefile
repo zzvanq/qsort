@@ -1,12 +1,6 @@
-BINARY_NAME=qsort
+test:
+	go test
 
-run:
-	go run main.go
+bench:
+	go test -bench=.
 
-build:
-	go build -o ${BINARY_NAME} main.go
-
-clean:
-	rm ${BINARY_NAME}
-
-.PHONY: run build clean
